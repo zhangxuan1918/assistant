@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict
 import pyperclip
 
 @dataclass(frozen=True)
@@ -15,13 +16,17 @@ class TextManager:
     # Unique id for a conversation.
     conversation_id: str
 
-    def copy_from_clipboard(self, task: CopyFromClipboardTask) -> CopyFromClipboardResult:
+    copy_results: Dict[str, CopyFromClipboardResult] = field(default_factory=dict)
+
+    def copy_from_clipboard(self, task: CopyFromClipboardTask) -> str:
         # TODO: lost format when copying from clipboard.
         text = pyperclip.paste()
-        return CopyFromClipboardResult(task=task, text=text)
+        result = CopyFromClipboardResult(task=task, text=text)
+        self.copy_results[task.task_id] = result
+        return result.text
     
 if __name__ == "__main__":
     task = CopyFromClipboardTask(task_id="test")
     text_manager = TextManager(conversation_id="text")
-    res = text_manager.copy_from_clipboard(task)
-    print(f"copied from clipboard: {res.text}")
+    text = text_manager.copy_from_clipboard(task)
+    print(f"copied from clipboard: {text}")
