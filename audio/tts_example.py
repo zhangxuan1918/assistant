@@ -1,5 +1,3 @@
-import os
-import re
 from audio_manager import AudioManager, TextToSpeechResult, TextToSpeechTask
 from tts_service import TTSService
 from util import play_audio

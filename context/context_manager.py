@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 import os
+import threading
 import time
-from typing import Dict, List
+from typing import Any, Dict, List, Tuple
 import uuid
 
 import pyaudio
@@ -11,7 +12,10 @@ from audio.audio_manager import (
     SpeechToTextTask,
     TextToSpeechTask,
 )
+from audio.stt_service import STTService
+from audio.tts_service import TTSService
 from audio.util import play_audio, record_audio
+from llm.llm_service import LLMService
 from text.text_manager import (
     CopyFromClipboardTask,
     TextManager,
@@ -28,16 +32,17 @@ class TaskType(Enum):
 
 @dataclass
 class ContextManager:
-    audio_manager: AudioManager
-    text_manager: TextManager
-    llm_manager: LlmManager
     # We store temporary data in temp/folder/uuid
     temp_folder: str = "/tmp/assistant"
 
     def __post_init__(self):
+        self._conversation_id = str(uuid.uuid4())
+        self.audio_manager = AudioManager(conversation_id=self._conversation_id)
+        self.text_manager = TextManager(conversation_id=self._conversation_id)
+        self.llm_manager = LlmManager(conversation_id=self._conversation_id)
+
         # Create temp folder.
-        self._uuid = str(uuid.uuid4())
-        self._temp_folder = os.path.join(self.temp_folder, self._uuid)
+        self._temp_folder = os.path.join(self.temp_folder, self._conversation_id)
         os.makedirs(self._temp_folder)
         self._conversation_turn: int = 0
         self._py_audio = pyaudio.PyAudio()
@@ -51,12 +56,13 @@ class ContextManager:
     def start_conversation(self):
         self._conversation_turn += 1
         self._prompts.append({})
-        # Add speech to text task. This converts the user voice input to text.
-        audio_input_filepath = os.path.join(
-            self._temp_folder, f"input_{self._conversation_turn}.wav"
-        )
+        # # Add speech to text task. This converts the user voice input to text.
+        # audio_input_filepath = os.path.join(
+        #     self._temp_folder, f"input_{self._conversation_turn}.wav"
+        # )
 
-        record_audio(p=self._py_audio, filepath=audio_input_filepath)
+        # record_audio(p=self._py_audio, filepath=audio_input_filepath)
+        audio_input_filepath = '/tmp/what_is_langform.wav'
 
         audio_to_text_task = SpeechToTextTask(
             task_id=self.get_task_id(TaskType.AUDIO_TO_TEXT, self._conversation_turn),
@@ -132,8 +138,40 @@ class ContextManager:
     def _get_task_id(
         self, task_type: TaskType, turn: int, index: None | int = None
     ) -> int:
-        task_id = f"TASK_{self._uuid}_{task_type.name}_{turn}"
+        task_id = f"TASK_{self._conversation_id}_{task_type.name}_{turn}"
         if index is not None:
             task_id += f"_{index}"
         return task_id
 
+
+def start_services(context_manager: ContextManager) -> List[Tuple[Any, threading.Thread]]:
+    stt_service = STTService(context_manager.audio_manager)
+    stt_thread = threading.Thread(target=stt_service.run)
+    stt_thread.start()
+
+    tts_service = TTSService(context_manager.audio_manager)
+    tts_thread = threading.Thread(target=tts_service.run)
+    tts_thread.start()
+
+    llm_service = LLMService(context_manager.llm_manager)
+    llm_thread = threading.Thread(target=llm_service.run)
+    llm_thread.start()
+    
+    return [(stt_service, stt_thread), (tts_service, tts_thread), (llm_service, llm_thread)]
+
+def stop_services(services: List[Tuple[Any, threading.Thread]]) -> None:
+    for service, thread in services:
+        service.stop()
+        thread.join()
+
+
+def stop_stt(stt_service: STTService, thread: threading.Thread) -> None:
+    stt_service.stop()
+    thread.join()
+
+if __name__ == "__main__":
+    # context_manager = ContextManager()
+    # services = start_services(context_manager=context_manager)
+    # context_manager.start_conversation()
+    # stop_services(services=services)
+    print("hello world")
