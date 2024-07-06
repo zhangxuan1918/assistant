@@ -1,6 +1,6 @@
-from audio_manager import AudioManager, TextToSpeechResult, TextToSpeechTask
-from tts_service import TTSService
-from util import play_audio
+from audio.audio_manager import AudioManager, TextToSpeechResult, TextToSpeechTask
+from audio.tts_service import TTSService
+from audio.util import play_audio
 
 if __name__ == "__main__":
     text = "How to Record Audio using Python?"

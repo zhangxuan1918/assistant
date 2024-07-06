@@ -5,7 +5,7 @@ from math import e
 import time
 from typing import Tuple
 from openai import OpenAI
-from audio_manager import AudioManager, SpeechToTextResult, SpeechToTextTask
+from audio.audio_manager import AudioManager, SpeechToTextResult, SpeechToTextTask
 
 
 @dataclass(frozen=True)

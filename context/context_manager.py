@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+import json
 import os
 import threading
 import time
@@ -7,14 +8,14 @@ from typing import Any, Dict, List, Tuple
 import uuid
 
 import pyaudio
+from audio.stt_service import STTService
+from audio.tts_service import TTSService
+from audio.util import play_audio, record_audio
 from audio.audio_manager import (
     AudioManager,
     SpeechToTextTask,
     TextToSpeechTask,
 )
-from audio.stt_service import STTService
-from audio.tts_service import TTSService
-from audio.util import play_audio, record_audio
 from llm.llm_service import LLMService
 from text.text_manager import (
     CopyFromClipboardTask,
@@ -24,10 +25,10 @@ from llm.llm_manager import LlmGenerationTask, LlmManager, TaskStatus
 
 
 class TaskType(Enum):
-    AUDIO_TO_TEXT: 1
-    TEXT_TO_AUDIO: 2
-    LLM_GEN: 3
-    COPY_FROM_CLIPBOARD: 4
+    AUDIO_TO_TEXT = 1
+    TEXT_TO_AUDIO = 2
+    LLM_GEN = 3
+    COPY_FROM_CLIPBOARD = 4
 
 
 @dataclass
@@ -56,16 +57,14 @@ class ContextManager:
     def start_conversation(self):
         self._conversation_turn += 1
         self._prompts.append({})
-        # # Add speech to text task. This converts the user voice input to text.
-        # audio_input_filepath = os.path.join(
-        #     self._temp_folder, f"input_{self._conversation_turn}.wav"
-        # )
-
-        # record_audio(p=self._py_audio, filepath=audio_input_filepath)
-        audio_input_filepath = '/tmp/what_is_langform.wav'
+        # Add speech to text task. This converts the user voice input to text.
+        audio_input_filepath = os.path.join(
+            self._temp_folder, f"input_{self._conversation_turn}.wav"
+        )
+        record_audio(p=self._py_audio, filepath=audio_input_filepath)
 
         audio_to_text_task = SpeechToTextTask(
-            task_id=self.get_task_id(TaskType.AUDIO_TO_TEXT, self._conversation_turn),
+            task_id=self._get_task_id(TaskType.AUDIO_TO_TEXT, self._conversation_turn),
             filepath=audio_input_filepath,
         )
         self._audio_to_text_tasks.append(audio_to_text_task)
@@ -73,7 +72,7 @@ class ContextManager:
 
         # Add copy from clipboard task. This copies context from clipboard.
         copy_from_clipboard_task = CopyFromClipboardTask(
-            task_id=self.get_task_id(
+            task_id=self._get_task_id(
                 TaskType.COPY_FROM_CLIPBOARD, self._conversation_turn
             )
         )
@@ -93,8 +92,11 @@ class ContextManager:
         self._play_response()
 
     def _generate_response(self):
+        print("prompt dump: ")
+        print(json.dumps(self._prompts[-1], indent=4))
         llm_gen_task = LlmGenerationTask(
-            task_id=self._get_task_id(TaskType.LLM_GEN), **self._prompts[-1]
+            task_id=self._get_task_id(TaskType.LLM_GEN, self._conversation_turn),
+            **self._prompts[-1],
         )
         self._llm_gen_tasks.append(llm_gen_task)
         self.llm_manager.add_text_gen_task(llm_gen_task)
@@ -113,14 +115,14 @@ class ContextManager:
             if response is not None:
                 index += 1
                 print(response, end="")
-                self._text_to_audio_tasks[-1].append(
-                    TextToSpeechTask(
-                        task_id=self._get_task_id(
-                            TaskType.TEXT_TO_AUDIO, self._conversation_turn, index
-                        ),
-                        text=response,
-                    )
+                text_speech_task = TextToSpeechTask(
+                    task_id=self._get_task_id(
+                        TaskType.TEXT_TO_AUDIO, self._conversation_turn, index
+                    ),
+                    text=response,
                 )
+                self._text_to_audio_tasks[-1].append(text_speech_task)
+                self.audio_manager.add_text_to_audio_task(task=text_speech_task)
             elif task_status == TaskStatus.FINISHED:
                 break
 
@@ -144,7 +146,9 @@ class ContextManager:
         return task_id
 
 
-def start_services(context_manager: ContextManager) -> List[Tuple[Any, threading.Thread]]:
+def start_services(
+    context_manager: ContextManager,
+) -> List[Tuple[Any, threading.Thread]]:
     stt_service = STTService(context_manager.audio_manager)
     stt_thread = threading.Thread(target=stt_service.run)
     stt_thread.start()
@@ -156,8 +160,13 @@ def start_services(context_manager: ContextManager) -> List[Tuple[Any, threading
     llm_service = LLMService(context_manager.llm_manager)
     llm_thread = threading.Thread(target=llm_service.run)
     llm_thread.start()
-    
-    return [(stt_service, stt_thread), (tts_service, tts_thread), (llm_service, llm_thread)]
+
+    return [
+        (stt_service, stt_thread),
+        (tts_service, tts_thread),
+        (llm_service, llm_thread),
+    ]
+
 
 def stop_services(services: List[Tuple[Any, threading.Thread]]) -> None:
     for service, thread in services:
@@ -169,9 +178,9 @@ def stop_stt(stt_service: STTService, thread: threading.Thread) -> None:
     stt_service.stop()
     thread.join()
 
+
 if __name__ == "__main__":
-    # context_manager = ContextManager()
-    # services = start_services(context_manager=context_manager)
-    # context_manager.start_conversation()
-    # stop_services(services=services)
-    print("hello world")
+    context_manager = ContextManager()
+    services = start_services(context_manager=context_manager)
+    context_manager.start_conversation()
+    stop_services(services=services)

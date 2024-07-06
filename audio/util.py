@@ -29,8 +29,12 @@ def play_audio(url: str) -> None:
 
 
 def record_audio(
-    p: pyaudio.PyAudio, filepath: str, channels=1, rate=44100, chunk=1024
+    p: pyaudio.PyAudio, filepath: str, channels=1, rate=16000, chunk=1024
 ) -> None:
+    print("Recording... Press 'ctrl+q' to stop")
+    frames = []
+    stop_recording_flag = threading.Event()
+
     # Open stream.
     stream = p.open(
         format=pyaudio.paInt16,
@@ -39,12 +43,9 @@ def record_audio(
         input=True,
         frames_per_buffer=chunk,
     )
-    print("Recording... Press 'ctrl+q' to stop")
-    frames = []
-    stop_recording_flag = threading.Event()
     def _record_audio_chunk():
         while not stop_recording_flag.is_set():
-            data = stream.read(chunk)
+            data = stream.read(chunk, exception_on_overflow=False)
             frames.append(data)
 
     try:
