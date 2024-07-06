@@ -3,12 +3,16 @@ import re
 import threading
 from typing import Tuple
 from langchain_community.chat_models import ChatOllama
-from prompt_util import ASSISTANT_PROMPT, SYSTEM_PROMPT, SYSTEM_ROLE, USER_INPUT, USER_PROMPT
-from llm_manager import LlmManager, LlmGenerationTask, LlmGenerationResult, TaskStatus
+from llm.prompt_util import ASSISTANT_PROMPT, SYSTEM_PROMPT, SYSTEM_ROLE, USER_INPUT, USER_PROMPT
+from llm.llm_manager import LlmManager, LlmGenerationTask, LlmGenerationResult, TaskStatus
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 SENTENCE_END_PATTERN = r'[A-Za-z]+[\.\?\!]$'
+
+# Remove list numbering, e.g. 1., 2. etc.
+# Remove '*'
+CLEAN_LLM_RESPONSE_PATTERN = r'^\d+\.\s*|\*'
 
 @dataclass
 class LLMService:
@@ -18,7 +22,8 @@ class LLMService:
     model_temparature: float = field(default=0.7)
     stop_event: threading.Event = field(default_factory=threading.Event)
     system_prompt: str = field(default=SYSTEM_ROLE)
-    stream_min_num_tokens_to_emit: int = field(default=30)
+    stream_first_chunk_min_num_tokens_to_emit: int = field(default=20)
+    stream_min_num_tokens_to_emit: int = field(default=60)
 
     def __post_init__(self):
         self.llm = ChatOllama(model=self.model_name, temperature=self.model_temparature, base_url=self.ollama_base_url)
@@ -45,22 +50,26 @@ class LLMService:
 
     def convert(self, task: LlmGenerationTask):
         text = ""
-        num_tokens = 0
+        num_tokens, index = 0, 0
         for chunk in self.chain.stream({"context": task.context, "question": task.question}):
             text += chunk
             num_tokens += 1
-            if self._should_emit(text, num_tokens):
-                yield text
+            if self._should_emit(text, num_tokens, index):
+                yield self._process_text(text)
                 text = ""
                 num_tokens = 0
+                index += 1
         if text:
             yield text
 
-    # def _process_chunk(self, chunks: Array[str]) -> str:
-    #     return ''.join(chunks)
+    def _process_text(self, text: str) -> str:
+        # Remove the pattern from the beginning of each line
+        cleaned_text = re.sub(CLEAN_LLM_RESPONSE_PATTERN, '', text, flags=re.MULTILINE)
+        return cleaned_text
 
-    def _should_emit(self, text: str, num_tokens: int) -> bool:
-        if num_tokens >= self.stream_min_num_tokens_to_emit and self._is_end_of_sentence(text):
+    def _should_emit(self, text: str, num_tokens: int, index: int) -> bool:
+        min_num_tokens_to_emit = self.stream_first_chunk_min_num_tokens_to_emit if index > 0 else self.stream_first_chunk_min_num_tokens_to_emit
+        if num_tokens >= min_num_tokens_to_emit and self._is_end_of_sentence(text):
             return True
         return False
     

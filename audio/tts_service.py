@@ -1,13 +1,11 @@
-from ast import Tuple
 from dataclasses import dataclass, field
-from re import T
 import threading
 import time
 from typing import Any, Dict, List, Tuple
 from openai import audio
 import requests
-from audio_manager import AudioManager, TextToSpeechTask, TextToSpeechResult
-from util import play_audio
+from audio.audio_manager import AudioManager, TextToSpeechTask, TextToSpeechResult
+from audio.util import play_audio
 
 
 @dataclass(frozen=True)
@@ -34,7 +32,7 @@ class TTSService:
 
     def convert(self, task: TextToSpeechTask) -> Dict[Any, Any]:
         try:
-            return requests.post(
+            raw_response = requests.post(
                 self.url,
                 data={
                     "text": task.text,
@@ -46,9 +44,11 @@ class TTSService:
                     "skip_refine": self.skip_refine,
                     "custom_voice": self.custom_voice,
                 },
-            ).json()
+            )
+            return raw_response.json()
         except Exception as e:
             print(f"Error converting text to audio: {e}")
+            print(f"raw response: {raw_response}")
             return {"code": 1, "msg": "error", "error": e}
 
     def stop(self):
