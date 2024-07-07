@@ -23,10 +23,10 @@ class LLMService:
     stop_event: threading.Event = field(default_factory=threading.Event)
     system_prompt: str = field(default=SYSTEM_ROLE)
     stream_first_chunk_min_num_tokens_to_emit: int = field(default=20)
-    stream_min_num_tokens_to_emit: int = field(default=60)
+    stream_min_num_tokens_to_emit: int = field(default=20)
 
     def __post_init__(self):
-        self.llm = ChatOllama(model=self.model_name, temperature=self.model_temparature, base_url=self.ollama_base_url)
+        self.llm = ChatOllama(model=self.model_name, temperaturaaae=self.model_temparature, base_url=self.ollama_base_url)
         self.prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", SYSTEM_PROMPT.format(prompt=self.system_prompt)),
