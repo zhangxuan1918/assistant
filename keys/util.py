@@ -2,8 +2,10 @@ import threading
 from typing import Any, Set, Callable
 from pynput.keyboard import Key, Listener, KeyCode
 
-AUDIO_INPUT_START = {Key.ctrl, KeyCode.from_char("s")}
-AUDIO_INPUT_END = {Key.ctrl, KeyCode.from_char("q")}
+CONVERSATION_INPUT_START = {KeyCode.from_char("a")}
+CONVERSATION_INPUT_START_STR = "+".join([str(key) for key in CONVERSATION_INPUT_START])
+AUDIO_INPUT_END = {KeyCode.from_char("a")}
+AUDIO_INPUT_END_STR = "+".join([str(key) for key in AUDIO_INPUT_END])
 
 
 def monitor_keyboard_and_execute_func(

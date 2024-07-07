@@ -5,7 +5,7 @@ from pydub import AudioSegment
 from pydub.playback import play
 import pyaudio
 import wave
-from keys.util import AUDIO_INPUT_END, monitor_keyboard_and_execute_func
+from keys.util import AUDIO_INPUT_END, AUDIO_INPUT_END_STR, monitor_keyboard_and_execute_func
 
 # pydub relies on ffmpeg: brew install ffmpeg
 
@@ -31,7 +31,7 @@ def play_audio(url: str) -> None:
 def record_audio(
     p: pyaudio.PyAudio, filepath: str, channels=1, rate=16000, chunk=1024
 ) -> None:
-    print("Recording... Press 'ctrl+q' to stop")
+    print(f"Recording... Press '{AUDIO_INPUT_END_STR}' to stop")
     frames = []
     stop_recording_flag = threading.Event()
 
@@ -58,7 +58,6 @@ def record_audio(
         # Stop and close the stream
         stream.stop_stream()
         stream.close()
-        p.terminate()
 
         # Save the recorded data as a WAV file
         wf = wave.open(filepath, "wb")

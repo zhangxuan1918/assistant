@@ -56,11 +56,19 @@ class ContextManager:
 
     def start_conversation(self):
         self._conversation_turn += 1
+
+        print(
+            "================================================================================="
+            f"INFO: start conversation: id={self._conversation_id}, turn={self._conversation_turn} ..."
+            "================================================================================="
+        )
+
         self._prompts.append({})
         # Add speech to text task. This converts the user voice input to text.
         audio_input_filepath = os.path.join(
             self._temp_folder, f"input_{self._conversation_turn}.wav"
         )
+        print("INFO: recording user audio input ...")
         record_audio(p=self._py_audio, filepath=audio_input_filepath)
 
         audio_to_text_task = SpeechToTextTask(
@@ -68,32 +76,37 @@ class ContextManager:
             filepath=audio_input_filepath,
         )
         self._audio_to_text_tasks.append(audio_to_text_task)
+        print("INFO: adding speech to text task ...")
         self.audio_manager.add_audio_to_text_task(audio_to_text_task)
 
         # Add copy from clipboard task. This copies context from clipboard.
+        print("INFO: adding copy from clipboard task ...")
         copy_from_clipboard_task = CopyFromClipboardTask(
             task_id=self._get_task_id(
                 TaskType.COPY_FROM_CLIPBOARD, self._conversation_turn
             )
         )
         self._copy_from_clipboard_tasks.append(copy_from_clipboard_task)
-        self._prompts[-1]["context"] = self.text_manager.copy_from_clipboard(
+        clipboard_text = self.text_manager.copy_from_clipboard(
             task=copy_from_clipboard_task
         )
+        self._prompts[-1]["context"] = clipboard_text
+        print(f"INFO: context: {clipboard_text[:50]}")
 
         # Get speech to text results.
         while not self.audio_manager.has_audio_to_text_results(task=audio_to_text_task):
             time.sleep(1)
-        self._prompts[-1]["question"] = self.audio_manager.get_audio_to_text_result(
+        user_question = self.audio_manager.get_audio_to_text_result(
             task_id=audio_to_text_task.task_id
         )
+        self._prompts[-1]["question"] = user_question
+        print(f"INFO: user question: {user_question}")
 
         self._generate_response()
         self._play_response()
 
     def _generate_response(self):
-        print("prompt dump: ")
-        print(json.dumps(self._prompts[-1], indent=4))
+        print("Info: generate response from llm ...")
         llm_gen_task = LlmGenerationTask(
             task_id=self._get_task_id(TaskType.LLM_GEN, self._conversation_turn),
             **self._prompts[-1],
@@ -114,7 +127,7 @@ class ContextManager:
             )
             if response is not None:
                 index += 1
-                print(response, end="")
+                print(response)
                 text_speech_task = TextToSpeechTask(
                     task_id=self._get_task_id(
                         TaskType.TEXT_TO_AUDIO, self._conversation_turn, index
@@ -128,13 +141,17 @@ class ContextManager:
 
     def _play_response(self):
         tasks = self._text_to_audio_tasks[-1]
-        for task in tasks:
+        print(f"Info: add text to speech tasks: #{len(tasks)} ...")
+        for i, task in enumerate(tasks):
+            print(f"Info: wait for result from task {i} ...")
             while not self.audio_manager.has_text_to_audio_results(task=task):
                 time.sleep(1)
             file_urls: List[str] = self.audio_manager.get_text_to_audio_result(
                 task.task_id
             )
-            for url in file_urls:
+            print(f"Info: total #{len(file_urls)} generated")
+            for j, url in enumerate(file_urls):
+                print(f"Info: play audio file {j}th, url: {url}...")
                 play_audio(url=url)
 
     def _get_task_id(
@@ -144,6 +161,15 @@ class ContextManager:
         if index is not None:
             task_id += f"_{index}"
         return task_id
+    
+    def clear(self) -> None:
+        # Clean up resources used.
+        # Close pyaudio.
+        self._py_audio.terminate()
+
+        # Delete temporary folder.
+        if os.path.exists(self._temp_folder):
+            os.removedirs(self._temp_folder)
 
 
 def start_services(
