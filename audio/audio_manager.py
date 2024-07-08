@@ -39,7 +39,7 @@ class TextToSpeechResultChatTTS(TextToSpeechResult):
 
     def __post_init__(self):
         response = self.raw_response.json()
-        if response == "ok":
+        if response["msg"] == "ok":
             self.file_paths, self.file_urls = [
                 res["filename"] for res in response["audio_files"]
             ], [res["url"] for res in response["audio_files"]]
