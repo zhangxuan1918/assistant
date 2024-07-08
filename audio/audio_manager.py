@@ -64,10 +64,6 @@ class AudioManager:
     text_to_audio_tasks: Queue[TextToSpeechTask] = field(default_factory=Queue)
     # Buffer for text processed. We use id to consume the text. Afterwards, we remove it.
     text_to_audio_results: Dict[str, TextToSpeechResult] = field(default_factory=dict)
-    # Lock for accessing audio_to_text_results.
-    audio_to_text_lock: threading.Lock = field(default_factory=threading.Lock)
-    # Lock for accessing text_to_audio_results.
-    text_to_audio_lock: threading.Lock = field(default_factory=threading.Lock)
 
     def add_audio_to_text_task(self, task: SpeechToTextTask) -> None:
         self.audio_to_text_tasks.put(task)
@@ -79,8 +75,8 @@ class AudioManager:
             return None
 
     def save_audio_to_text_result(self, result: SpeechToTextResult) -> None:
-        with self.audio_to_text_lock:
-            self.audio_to_text_results[result.task.task_id] = result
+        self.audio_to_text_results[result.task.task_id] = result
+        self.audio_to_text_tasks.task_done()
 
     def has_pending_audio_to_text_tasks(self) -> bool:
         return self.num_pending_audio_to_text_tasks() > 0
@@ -89,17 +85,14 @@ class AudioManager:
         return self.audio_to_text_tasks.qsize()
 
     def has_audio_to_text_results(self, task: SpeechToTextTask) -> bool:
-        with self.audio_to_text_lock:
-            return task.task_id in self.audio_to_text_results
+        return task.task_id in self.audio_to_text_results
 
     def num_audio_to_text_results(self) -> int:
-        with self.audio_to_text_lock:
-            return len(self.audio_to_text_results)
+        return len(self.audio_to_text_results)
 
     def get_audio_to_text_result(self, task_id) -> str | None:
-        with self.audio_to_text_lock:
-            if task_id in self.audio_to_text_results:
-                return self.audio_to_text_results[task_id].text
+        if task_id in self.audio_to_text_results:
+            return self.audio_to_text_results[task_id].text
 
     def clean_up_audio_to_text_task(self, result: SpeechToTextResult) -> None:
         # Delete audio file.
@@ -120,8 +113,8 @@ class AudioManager:
             return
 
     def save_text_to_audio_result(self, result: TextToSpeechResult) -> None:
-        with self.text_to_audio_lock:
-            self.text_to_audio_results[result.task.task_id] = result
+        self.text_to_audio_results[result.task.task_id] = result
+        self.text_to_audio_tasks.task_done()
 
     def has_pending_text_to_audio_tasks(self) -> bool:
         return self.num_pending_text_to_audio_tasks() > 0
@@ -130,19 +123,17 @@ class AudioManager:
         return self.text_to_audio_tasks.qsize()
 
     def has_text_to_audio_results(self, task: TextToSpeechTask) -> bool:
-        with self.text_to_audio_lock:
-            return task.task_id in self.text_to_audio_results
+        has_result = task.task_id in self.text_to_audio_results
+        return has_result
 
     def num_text_to_audio_results(self) -> int:
-        with self.text_to_audio_lock:
-            return len(self.text_to_audio_results)
+        return len(self.text_to_audio_results)
 
     def get_text_to_audio_result(self, task_id) -> None | TextToSpeechResult:
-        with self.text_to_audio_lock:
-            if task_id in self.text_to_audio_results:
-                return self.text_to_audio_results[task_id]
-            else:
-                return None
+        if task_id in self.text_to_audio_results:
+            return self.text_to_audio_results[task_id]
+        else:
+            return None
 
     def clean_up_text_to_audio_task(self, result: TextToSpeechResult) -> None:
         # Delete audio file.
