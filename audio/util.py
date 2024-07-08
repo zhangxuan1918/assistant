@@ -5,7 +5,11 @@ from pydub import AudioSegment
 from pydub.playback import play
 import pyaudio
 import wave
-from keys.util import AUDIO_INPUT_END, AUDIO_INPUT_END_STR, monitor_keyboard_and_execute_func
+from keys.util import (
+    AUDIO_INPUT_END,
+    AUDIO_INPUT_END_STR,
+    monitor_keyboard_and_execute_func,
+)
 
 # pydub relies on ffmpeg: brew install ffmpeg
 
@@ -19,8 +23,16 @@ def fetch_audio_from_url(url):
         return None
 
 
-def play_audio(url: str) -> None:
-    audio_data = fetch_audio_from_url(url=url)
+def play_audio(url: str | None, content: bytes | None = None) -> None:
+
+    if content is not None:
+        audio_data = content
+    elif url is not None:
+        audio_data = fetch_audio_from_url(url=url)
+    else:
+        print("Error: both url and content are none, cannot play audio!")
+        return
+
     try:
         audio = AudioSegment.from_file(io.BytesIO(audio_data))
         play(audio)
@@ -43,6 +55,7 @@ def record_audio(
         input=True,
         frames_per_buffer=chunk,
     )
+
     def _record_audio_chunk():
         while not stop_recording_flag.is_set():
             data = stream.read(chunk, exception_on_overflow=False)
@@ -50,7 +63,9 @@ def record_audio(
 
     try:
         monitor_keyboard_and_execute_func(
-            expected_keys=AUDIO_INPUT_END, stop_flag=stop_recording_flag, func=_record_audio_chunk
+            expected_keys=AUDIO_INPUT_END,
+            stop_flag=stop_recording_flag,
+            func=_record_audio_chunk,
         )
     except Exception as e:
         print(f"An error occurred: {e}")

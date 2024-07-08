@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum
-import json
 import os
 import threading
 import time
@@ -9,11 +8,17 @@ import uuid
 
 import pyaudio
 from audio.stt_service import STTService
-from audio.tts_service import TTSService
+from audio.tts_service import (
+    TTSServiceChatTTS,
+    TTSServiceMeloTTS,
+    TTSServiceType,
+)
 from audio.util import play_audio, record_audio
 from audio.audio_manager import (
     AudioManager,
     SpeechToTextTask,
+    TextToSpeechResultChatTTS,
+    TextToSpeechResultMeloTTS,
     TextToSpeechTask,
 )
 from llm.llm_service import LLMService
@@ -141,18 +146,17 @@ class ContextManager:
 
     def _play_response(self):
         tasks = self._text_to_audio_tasks[-1]
-        print(f"Info: add text to speech tasks: #{len(tasks)} ...")
-        for i, task in enumerate(tasks):
-            print(f"Info: wait for result from task {i} ...")
+        for task in tasks:
             while not self.audio_manager.has_text_to_audio_results(task=task):
-                time.sleep(1)
-            file_urls: List[str] = self.audio_manager.get_text_to_audio_result(
-                task.task_id
-            )
-            print(f"Info: total #{len(file_urls)} generated")
-            for j, url in enumerate(file_urls):
-                print(f"Info: play audio file {j}th, url: {url}...")
-                play_audio(url=url)
+                time.sleep(0.1)
+            result = self.audio_manager.get_text_to_audio_result(task.task_id)
+            if isinstance(result, TextToSpeechResultChatTTS):
+                print(f"Info: total #{len(result.file_urls)} generated")
+                for j, url in enumerate(result.file_urls):
+                    print(f"Info: play audio file {j}th, url: {url}...")
+                    play_audio(url=url)
+            elif isinstance(result, TextToSpeechResultMeloTTS):
+                play_audio(url=None, content=result.content)
 
     def _get_task_id(
         self, task_type: TaskType, turn: int, index: None | int = None
@@ -161,7 +165,7 @@ class ContextManager:
         if index is not None:
             task_id += f"_{index}"
         return task_id
-    
+
     def clear(self) -> None:
         # Clean up resources used.
         # Close pyaudio.
@@ -173,13 +177,18 @@ class ContextManager:
 
 
 def start_services(
-    context_manager: ContextManager,
+    context_manager: ContextManager, tts_service_type: TTSServiceType = TTSServiceType.CHAT_TTS
 ) -> List[Tuple[Any, threading.Thread]]:
     stt_service = STTService(context_manager.audio_manager)
     stt_thread = threading.Thread(target=stt_service.run)
     stt_thread.start()
 
-    tts_service = TTSService(context_manager.audio_manager)
+    if tts_service_type == TTSServiceType.CHAT_TTS:
+        tts_service = TTSServiceChatTTS(context_manager.audio_manager)
+    elif tts_service_type == TTSServiceType.MELO_TTS:
+        tts_service = TTSServiceMeloTTS(context_manager.audio_manager)
+    else:
+        raise Exception(f"TTSServiceType: {tts_service_type.Name} not supported")
     tts_thread = threading.Thread(target=tts_service.run)
     tts_thread.start()
 

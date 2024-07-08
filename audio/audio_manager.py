@@ -1,7 +1,11 @@
+from ast import Bytes
 from dataclasses import dataclass, field
 import os
 from queue import Queue
+from re import A
 from typing import Any, Dict, List
+
+from requests import Response
 
 
 @dataclass(frozen=True)
@@ -25,15 +29,27 @@ class TextToSpeechTask:
 @dataclass
 class TextToSpeechResult:
     task: TextToSpeechTask
-    raw_response: Dict[Any, Any]
+    raw_response: Response
+
+@dataclass
+class TextToSpeechResultChatTTS(TextToSpeechResult):
     file_paths: List[str] = field(default_factory=list)
     file_urls: List[str] = field(default_factory=list)
 
     def __post_init__(self):
-        if self.raw_response["msg"] == "ok":
+        response = self.raw_response.json()
+        if response == "ok":
             self.file_paths, self.file_urls = [
-                res["filename"] for res in self.raw_response["audio_files"]
-            ], [res["url"] for res in self.raw_response["audio_files"]]
+                res["filename"] for res in response["audio_files"]
+            ], [res["url"] for res in response["audio_files"]]
+
+@dataclass
+class TextToSpeechResultMeloTTS(TextToSpeechResult):
+    content: Bytes | None = field(default=None)
+
+    def __post_init__(self):
+        if self.raw_response.status_code == 200:
+            self.content = self.raw_response.content
 
 
 @dataclass
@@ -111,9 +127,9 @@ class AudioManager:
     def num_text_to_audio_results(self) -> int:
         return len(self.text_to_audio_results)
 
-    def get_text_to_audio_result(self, task_id) -> List[str]:
+    def get_text_to_audio_result(self, task_id) -> TextToSpeechResult:
         if task_id in self.text_to_audio_results:
-            return self.text_to_audio_results[task_id].file_urls
+            return self.text_to_audio_results[task_id]
         else:
             return []
 
