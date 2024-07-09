@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 import os
 from queue import Queue
 from re import A
+import threading
 from typing import Any, Dict, List
 
 from requests import Response
@@ -38,7 +39,7 @@ class TextToSpeechResultChatTTS(TextToSpeechResult):
 
     def __post_init__(self):
         response = self.raw_response.json()
-        if response == "ok":
+        if response["msg"] == "ok":
             self.file_paths, self.file_urls = [
                 res["filename"] for res in response["audio_files"]
             ], [res["url"] for res in response["audio_files"]]
@@ -54,8 +55,6 @@ class TextToSpeechResultMeloTTS(TextToSpeechResult):
 
 @dataclass
 class AudioManager:
-    # Unique id for a conversation.
-    conversation_id: str
     # Buffer for audio to be processed. We pop up the front element to process.
     audio_to_text_tasks: Queue[SpeechToTextTask] = field(default_factory=Queue)
     # Buffer for audio processed. We use id to consume the text. Afterwards, we remove it.
@@ -77,6 +76,7 @@ class AudioManager:
 
     def save_audio_to_text_result(self, result: SpeechToTextResult) -> None:
         self.audio_to_text_results[result.task.task_id] = result
+        self.audio_to_text_tasks.task_done()
 
     def has_pending_audio_to_text_tasks(self) -> bool:
         return self.num_pending_audio_to_text_tasks() > 0
@@ -114,6 +114,7 @@ class AudioManager:
 
     def save_text_to_audio_result(self, result: TextToSpeechResult) -> None:
         self.text_to_audio_results[result.task.task_id] = result
+        self.text_to_audio_tasks.task_done()
 
     def has_pending_text_to_audio_tasks(self) -> bool:
         return self.num_pending_text_to_audio_tasks() > 0
@@ -127,11 +128,11 @@ class AudioManager:
     def num_text_to_audio_results(self) -> int:
         return len(self.text_to_audio_results)
 
-    def get_text_to_audio_result(self, task_id) -> TextToSpeechResult:
+    def get_text_to_audio_result(self, task_id) -> None | TextToSpeechResult:
         if task_id in self.text_to_audio_results:
             return self.text_to_audio_results[task_id]
         else:
-            return []
+            return None
 
     def clean_up_text_to_audio_task(self, result: TextToSpeechResult) -> None:
         # Delete audio file.

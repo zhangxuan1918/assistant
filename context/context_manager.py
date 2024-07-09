@@ -43,9 +43,9 @@ class ContextManager:
 
     def __post_init__(self):
         self._conversation_id = str(uuid.uuid4())
-        self.audio_manager = AudioManager(conversation_id=self._conversation_id)
-        self.text_manager = TextManager(conversation_id=self._conversation_id)
-        self.llm_manager = LlmManager(conversation_id=self._conversation_id)
+        self.audio_manager = AudioManager()
+        self.text_manager = TextManager()
+        self.llm_manager = LlmManager()
 
         # Create temp folder.
         self._temp_folder = os.path.join(self.temp_folder, self._conversation_id)
@@ -100,7 +100,7 @@ class ContextManager:
 
         # Get speech to text results.
         while not self.audio_manager.has_audio_to_text_results(task=audio_to_text_task):
-            time.sleep(1)
+            time.sleep(0.1)
         user_question = self.audio_manager.get_audio_to_text_result(
             task_id=audio_to_text_task.task_id
         )

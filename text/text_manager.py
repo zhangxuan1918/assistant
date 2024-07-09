@@ -13,8 +13,6 @@ class CopyFromClipboardResult:
 
 @dataclass
 class TextManager:
-    # Unique id for a conversation.
-    conversation_id: str
 
     copy_results: Dict[str, CopyFromClipboardResult] = field(default_factory=dict)
 
@@ -27,6 +25,6 @@ class TextManager:
     
 if __name__ == "__main__":
     task = CopyFromClipboardTask(task_id="test")
-    text_manager = TextManager(conversation_id="text")
+    text_manager = TextManager()
     text = text_manager.copy_from_clipboard(task)
     print(f"copied from clipboard: {text}")

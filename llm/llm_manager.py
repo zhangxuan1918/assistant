@@ -23,8 +23,6 @@ class TaskStatus(Enum):
 
 @dataclass
 class LlmManager:
-    # Unique id for a conversation.
-    conversation_id: str
     # Buffer for text generation tasks. We pop up the front element to process.
     text_gen_tasks: Queue[LlmGenerationTask] = field(default_factory=Queue)
     # Buffer for generated responsese. We use id to consume the response.

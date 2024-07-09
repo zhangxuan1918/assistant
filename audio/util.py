@@ -34,7 +34,8 @@ def play_audio(url: str | None, content: bytes | None = None) -> None:
         return
 
     try:
-        audio = AudioSegment.from_file(io.BytesIO(audio_data))
+        # Need to specify format="wav", otherwise it's very slow.
+        audio = AudioSegment.from_file(io.BytesIO(audio_data), format="wav")
         play(audio)
     except Exception as e:
         print(f"Error playing audio: {str(e)}")

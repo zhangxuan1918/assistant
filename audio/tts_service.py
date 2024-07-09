@@ -104,6 +104,8 @@ class TTSServiceMeloTTS(TTSService):
                     self.audio_manager.save_text_to_audio_result(
                         TextToSpeechResultMeloTTS(task, raw_response)
                     )
+            else:
+                time.sleep(0.1)
 
     def convert(self, task: TextToSpeechTask) -> requests.Response:
         try:

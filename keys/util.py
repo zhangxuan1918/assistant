@@ -2,9 +2,9 @@ import threading
 from typing import Any, Set, Callable
 from pynput.keyboard import Key, Listener, KeyCode
 
-CONVERSATION_INPUT_START = {KeyCode.from_char("a")}
+CONVERSATION_INPUT_START = {Key.esc}
 CONVERSATION_INPUT_START_STR = "+".join([str(key) for key in CONVERSATION_INPUT_START])
-AUDIO_INPUT_END = {KeyCode.from_char("a")}
+AUDIO_INPUT_END = {Key.esc}
 AUDIO_INPUT_END_STR = "+".join([str(key) for key in AUDIO_INPUT_END])
 
 
