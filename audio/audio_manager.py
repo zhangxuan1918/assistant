@@ -123,8 +123,7 @@ class AudioManager:
         return self.text_to_audio_tasks.qsize()
 
     def has_text_to_audio_results(self, task: TextToSpeechTask) -> bool:
-        has_result = task.task_id in self.text_to_audio_results
-        return has_result
+        return task.task_id in self.text_to_audio_results
 
     def num_text_to_audio_results(self) -> int:
         return len(self.text_to_audio_results)

@@ -148,7 +148,7 @@ class ContextManager:
         tasks = self._text_to_audio_tasks[-1]
         for task in tasks:
             while not self.audio_manager.has_text_to_audio_results(task=task):
-                time.sleep(1)
+                time.sleep(0.1)
             result = self.audio_manager.get_text_to_audio_result(task.task_id)
             if isinstance(result, TextToSpeechResultChatTTS):
                 print(f"Info: total #{len(result.file_urls)} generated")
