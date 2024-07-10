@@ -1,5 +1,7 @@
 # Assistant
 
+./docs/demo_720.mov
+
 ![Diagram](./docs/diagram.png)
 
 * STT server: https://github.com/fedirz/faster-whisper-server
