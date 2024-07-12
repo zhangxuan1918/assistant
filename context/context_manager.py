@@ -6,7 +6,7 @@ import time
 from typing import Any, Dict, List, Tuple
 import uuid
 
-import pyaudio
+import speech_recognition as sr
 from audio.stt_service import STTService
 from audio.tts_service import (
     TTSServiceChatTTS,
@@ -38,8 +38,8 @@ class TaskType(Enum):
 
 @dataclass
 class ContextManager:
-    # We store temporary data in temp/folder/uuid
-    temp_folder: str = "/tmp/assistant"
+    # Default question to use when audio to text fails.
+    default_question: str = "Please summarize the context"
 
     def __post_init__(self):
         self._conversation_id = str(uuid.uuid4())
@@ -47,12 +47,7 @@ class ContextManager:
         self.text_manager = TextManager()
         self.llm_manager = LlmManager()
 
-        # Create temp folder.
-        self._temp_folder = os.path.join(self.temp_folder, self._conversation_id)
-        os.makedirs(self._temp_folder)
         self._conversation_turn: int = 0
-        self._py_audio = pyaudio.PyAudio()
-
         self._audio_to_text_tasks: List[SpeechToTextTask] = []
         self._copy_from_clipboard_tasks: List[CopyFromClipboardTask] = []
         self._llm_gen_tasks: List[LlmGenerationTask] = []
@@ -69,16 +64,12 @@ class ContextManager:
         )
 
         self._prompts.append({})
-        # Add speech to text task. This converts the user voice input to text.
-        audio_input_filepath = os.path.join(
-            self._temp_folder, f"input_{self._conversation_turn}.wav"
-        )
         print("INFO: recording user audio input ...")
-        record_audio(p=self._py_audio, filepath=audio_input_filepath)
+        audio_content = record_audio(device_index=1)
 
         audio_to_text_task = SpeechToTextTask(
             task_id=self._get_task_id(TaskType.AUDIO_TO_TEXT, self._conversation_turn),
-            filepath=audio_input_filepath,
+            audio_data=audio_content,
         )
         self._audio_to_text_tasks.append(audio_to_text_task)
         print("INFO: adding speech to text task ...")
@@ -99,10 +90,14 @@ class ContextManager:
         print(f"INFO: context: {clipboard_text[:50]}")
 
         # Get speech to text results.
+        # TODO: add a timeout.
         while not self.audio_manager.has_audio_to_text_results(task=audio_to_text_task):
             time.sleep(0.1)
-        user_question = self.audio_manager.get_audio_to_text_result(
-            task_id=audio_to_text_task.task_id
+        user_question = (
+            self.audio_manager.get_audio_to_text_result(
+                task_id=audio_to_text_task.task_id
+            )
+            or self.default_question
         )
         self._prompts[-1]["question"] = user_question
         print(f"INFO: user question: {user_question}")
@@ -177,7 +172,8 @@ class ContextManager:
 
 
 def start_services(
-    context_manager: ContextManager, tts_service_type: TTSServiceType = TTSServiceType.CHAT_TTS
+    context_manager: ContextManager,
+    tts_service_type: TTSServiceType = TTSServiceType.CHAT_TTS,
 ) -> List[Tuple[Any, threading.Thread]]:
     stt_service = STTService(context_manager.audio_manager)
     stt_thread = threading.Thread(target=stt_service.run)

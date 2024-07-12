@@ -1,10 +1,7 @@
-from ast import Bytes
 from dataclasses import dataclass, field
 import os
 from queue import Queue
-from re import A
-import threading
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from requests import Response
 
@@ -12,13 +9,13 @@ from requests import Response
 @dataclass(frozen=True)
 class SpeechToTextTask:
     task_id: str
-    filepath: str
+    audio_data: bytes
 
 
 @dataclass(frozen=True)
 class SpeechToTextResult:
     task: SpeechToTextTask
-    text: str
+    text: str | None
 
 
 @dataclass(frozen=True)
@@ -32,6 +29,7 @@ class TextToSpeechResult:
     task: TextToSpeechTask
     raw_response: Response
 
+
 @dataclass
 class TextToSpeechResultChatTTS(TextToSpeechResult):
     file_paths: List[str] = field(default_factory=list)
@@ -44,9 +42,10 @@ class TextToSpeechResultChatTTS(TextToSpeechResult):
                 res["filename"] for res in response["audio_files"]
             ], [res["url"] for res in response["audio_files"]]
 
+
 @dataclass
 class TextToSpeechResultMeloTTS(TextToSpeechResult):
-    content: Bytes | None = field(default=None)
+    content: bytes | None = field(default=None)
 
     def __post_init__(self):
         if self.raw_response.status_code == 200:

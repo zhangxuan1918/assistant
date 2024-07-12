@@ -1,5 +1,10 @@
 # Assistant
 
+<video width="600" controls>
+  <source src="docs/demo_480p.mov" type="video/quicktime">
+  Demo.
+</video>
+
 * STT server: https://github.com/fedirz/faster-whisper-server
 * TTS server: https://github.com/timhagel/MeloTTS-Docker-API-Server	
 * LLM server: https://github.com/ollama/ollama

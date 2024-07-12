@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import io
 import os
 import threading
 from math import e
@@ -20,24 +21,26 @@ class STTService:
         while not self.stop_event.is_set():
             if self.audio_manager.has_pending_audio_to_text_tasks():
                 task = self.audio_manager.get_audio_to_text_task()
-                if task is not None and (text := self.convert(task)) is not None:
-                    self.audio_manager.save_audio_to_text_result(
-                        SpeechToTextResult(task, text)
-                    )
+                self.audio_manager.save_audio_to_text_result(
+                    SpeechToTextResult(task=task, text=self.convert(task))
+                )
 
-    def convert(self, task: SpeechToTextTask) -> str | None:
+    def convert(self, task: SpeechToTextTask, lang="en") -> str | None:
         try:
-            audio_file = open(task.filepath, "rb")
+            audio_file = io.BytesIO(task.audio_data)
             transcript = self.client.audio.transcriptions.create(
-                model=self.model_name, file=audio_file
+                model=self.model_name,
+                file=audio_file,
+                language=lang,
             )
             return transcript.text
         except Exception as e:
             print(f"Error converting audio to text: {e}")
             return None
-        
+
     def stop(self):
         self.stop_event.set()
+
 
 def start_stt(audio_manager: AudioManager) -> Tuple[STTService, threading.Thread]:
     stt_service = STTService(audio_manager)
@@ -54,14 +57,16 @@ def stop_stt(stt_service: STTService, thread: threading.Thread) -> None:
 if __name__ == "__main__":
     filenames = ["audio.wav", "audio2.wav"]
     folder = os.path.dirname(os.path.abspath(__file__))
-    
+
     audio_manager = AudioManager(conversation_id="2")
     stt_service, thread = start_stt(audio_manager=audio_manager)
     for i, filename in enumerate(filenames):
         print(f"processing {i}th audio")
         task = SpeechToTextTask(task_id=str(i), filepath=os.path.join(folder, filename))
         audio_manager.add_audio_to_text_task(task)
-        print(f"has pending speech to text task: {audio_manager.has_pending_audio_to_text_tasks()}")
+        print(
+            f"has pending speech to text task: {audio_manager.has_pending_audio_to_text_tasks()}"
+        )
         while not audio_manager.has_audio_to_text_results(task=task):
             time.sleep(1)
         text = audio_manager.get_audio_to_text_result(task_id=task.task_id)

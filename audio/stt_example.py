@@ -1,17 +1,17 @@
 import os
 from audio.stt_service import STTService
-from audio.audio_manager import AudioManager, SpeechToTextResult, SpeechToTextTask
+from audio.audio_manager import AudioManager, SpeechToTextTask
 
 if __name__ == "__main__":
-    filename = "audio.wav"
+    filename = "./audio.wav"
     folder = os.path.dirname(os.path.abspath(__file__))
     filepath = os.path.join(folder, filename)
-    task = SpeechToTextTask(task_id="test", filepath=filepath)
+    with open(filepath, "rb") as wav_file:
+        audio_data = wav_file.read()
 
-    audio_manager = AudioManager(conversation_id="test_conv")
+    audio_manager = AudioManager()
     tts_service = STTService(audio_manager)
-
+    task = SpeechToTextTask(task_id="test", audio_data=audio_data)
     print(f"run speech to text ...")
     text = tts_service.convert(task=task)
-    result = SpeechToTextResult(task=task, text=text)
     print(f"text: {text}")
