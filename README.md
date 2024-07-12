@@ -1,9 +1,5 @@
 # Assistant
 
-./docs/demo_720.mov
-
-![Diagram](./docs/diagram.png)
-
 * STT server: https://github.com/fedirz/faster-whisper-server
 * TTS server: https://github.com/timhagel/MeloTTS-Docker-API-Server	
 * LLM server: https://github.com/ollama/ollama
