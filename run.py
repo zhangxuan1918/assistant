@@ -9,10 +9,10 @@ from keys.util import (
 )
 
 
-def main():
+def main(tts_service_type: TTSServiceType = TTSServiceType.MELO_TTS):
     context_manager = ContextManager()
     services = start_services(
-        context_manager=context_manager, tts_service_type=TTSServiceType.MELO_TTS
+        context_manager=context_manager, tts_service_type=tts_service_type
     )
     start_conversation_flag = threading.Event()
 
