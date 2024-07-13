@@ -1,29 +1,32 @@
+import os
+from assistant.llm.prompt_util import ASSISTANT_PROMPT, SYSTEM_PROMPT, SYSTEM_ROLE, USER_INPUT, USER_PROMPT
+from assistant.llm.llm_manager import LlmManager, LlmGenerationTask, LlmGenerationResult, TaskStatus
+
 from dataclasses import dataclass, field
 import re
 import threading
 from typing import Tuple
 from langchain_community.chat_models import ChatOllama
-from llm.prompt_util import ASSISTANT_PROMPT, SYSTEM_PROMPT, SYSTEM_ROLE, USER_INPUT, USER_PROMPT
-from llm.llm_manager import LlmManager, LlmGenerationTask, LlmGenerationResult, TaskStatus
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-SENTENCE_END_PATTERN = r'[A-Za-z]+[\.\?\!]$'
 
+SENTENCE_END_PATTERN = r'[A-Za-z]+[\.\?\!]$'
 # Remove list numbering, e.g. 1., 2. etc.
 # Remove '*'
 CLEAN_LLM_RESPONSE_PATTERN = r'^\d+\.\s*|\*'
 
+
 @dataclass
 class LLMService:
     llm_manager: LlmManager
-    ollama_base_url: str = field(default="http://192.168.1.26:11434")
-    model_name: str = field(default="llama3")
-    model_temparature: float = field(default=0.7)
+    ollama_base_url: str = os.environ.get("LLM_SERVICE_OLLAMA_BASE_URL", "http://192.168.1.26:11434")
+    model_name: str = os.environ.get("LLM_SERVICE_BASE_MODEL_NAME", "llama3")
+    model_temparature: float = float(os.environ.get("LLM_SERVICE_BASE_MODEL_TEMPERATURE", 0.7))
     stop_event: threading.Event = field(default_factory=threading.Event)
     system_prompt: str = field(default=SYSTEM_ROLE)
-    stream_first_chunk_min_num_tokens_to_emit: int = field(default=50)
-    stream_min_num_tokens_to_emit: int = field(default=1000)
+    stream_first_chunk_min_num_tokens_to_emit: int = int(os.environ.get("LLM_SERVICE_STEREAM_FIRST_CHUNK_MIN_NUM_TOKENS_TO_EMIT", 50))
+    stream_min_num_tokens_to_emit: int = int(os.environ.get("LLM_SERVICE_STEREAM_MIN_NUM_TOKENS_TO_EMIT", 1000))
 
     def __post_init__(self):
         self.llm = ChatOllama(model=self.model_name, temperaturaaae=self.model_temparature, base_url=self.ollama_base_url)

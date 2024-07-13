@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 import os
 from queue import Queue
 from typing import Dict, List
-
 from requests import Response
 
 

@@ -1,5 +1,5 @@
-from llm.llm_service import LLMService
-from llm.llm_manager import LlmGenerationTask, LlmManager
+from assistant.llm.llm_service import LLMService
+from assistant.llm.llm_manager import LlmGenerationTask, LlmManager
 
 
 if __name__ == "__main__":

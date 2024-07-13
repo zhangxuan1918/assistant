@@ -1,3 +1,12 @@
+from assistant.audio.audio_manager import (
+    AudioManager,
+    TextToSpeechResultChatTTS,
+    TextToSpeechResultMeloTTS,
+    TextToSpeechTask,
+)
+from assistant.audio.util import play_audio
+
+import os
 from dataclasses import dataclass, field
 from enum import Enum
 import json
@@ -6,13 +15,6 @@ import time
 from typing import Any, Dict, List, Tuple
 from openai import audio
 import requests
-from audio.audio_manager import (
-    AudioManager,
-    TextToSpeechResultChatTTS,
-    TextToSpeechResultMeloTTS,
-    TextToSpeechTask,
-)
-from audio.util import play_audio
 
 
 class TTSServiceType(Enum):
@@ -42,13 +44,13 @@ class TTSServiceChatTTS(TTSService):
     Too slow!!!
     """
 
-    url: str = "http://192.168.1.26:9966/tts"
-    voice: str = "3333"
-    temperature: float = 0.3
-    top_p: float = 0.7
-    top_k: int = 20
-    skip_refine: int = 0
-    custom_voice: int = 0
+    url: str = os.environ.get("TTS_SERVICE_CHAT_TTS_URL", "http://192.168.1.26:9966/tts")
+    voice: str = os.environ.get("TTS_SERVICE_CHAT_TTS_VOICE", "3333")
+    temperature: float = float(os.environ.get("TTS_SERVICE_CHAT_TTS_TEMPERATURE", 0.3))
+    top_p: float = float(os.environ.get("TTS_SERVICE_CHAT_TTS_TOP_P", 0.7))
+    top_k: int = int(os.environ.get("TTS_SERVICE_CHAT_TTS_TOP_K", 20))
+    skip_refine: int = int(os.environ.get("TTS_SERVICE_CHAT_TTS_REFINE", 0))
+    custom_voice: int = int(os.environ.get("TTS_SERVICE_CHAT_TTS_CUSTOM_VOICE", 0))
 
     def run(self):
         while not self.stop_event.is_set():
@@ -91,9 +93,9 @@ class TTSServiceMeloTTS(TTSService):
     Use MeloTTS for text to speech: https://github.com/timhagel/MeloTTS-Docker-API-Server
     """
 
-    url: str = "http://192.168.1.26:9966/convert/tts"
-    language: str = field(default="EN")
-    speaker_id: str = field(default="EN-US")
+    url: str = os.environ.get("TTS_SERVICE_MELO_TTS_URL", "http://192.168.1.26:9966/convert/tts")
+    language: str = os.environ.get("TTS_SERVICE_MELO_TTS_LANGUAGE", "EN")
+    speaker_id: str = os.environ.get("TTS_SERVICE_MELO_TTS_SPEAKER_ID", "EN-US")
 
     def run(self):
         while not self.stop_event.is_set():

@@ -1,3 +1,9 @@
+from assistant.audio.audio_manager import (
+    AudioManager,
+    SpeechToTextResult,
+    SpeechToTextTask,
+)
+
 from dataclasses import dataclass, field
 import io
 import os
@@ -6,14 +12,13 @@ from math import e
 import time
 from typing import Tuple
 from openai import OpenAI
-from audio.audio_manager import AudioManager, SpeechToTextResult, SpeechToTextTask
 
 
 @dataclass(frozen=True)
 class STTService:
     audio_manager: AudioManager
-    url: str = "http://192.168.1.26:8000/v1"
-    model_name: str = "Systran/faster-distil-whisper-large-v3"
+    url: str = os.environ.get("STT_SERVICE_URL", "http://192.168.1.26:8000/v1")
+    model_name: str = os.environ.get("STT_SERVICE_MODEL_NAME", "Systran/faster-distil-whisper-large-v3")
     stop_event: threading.Event = field(default_factory=threading.Event)
     client: OpenAI = OpenAI(api_key="dummy key", base_url=url)
 

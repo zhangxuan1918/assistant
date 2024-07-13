@@ -2,14 +2,17 @@ from dataclasses import dataclass, field
 from typing import Dict
 import pyperclip
 
+
 @dataclass(frozen=True)
 class CopyFromClipboardTask:
     task_id: str
+
 
 @dataclass
 class CopyFromClipboardResult:
     task: CopyFromClipboardTask
     text: str
+
 
 @dataclass
 class TextManager:
@@ -22,7 +25,8 @@ class TextManager:
         result = CopyFromClipboardResult(task=task, text=text)
         self.copy_results[task.task_id] = result
         return result.text
-    
+
+
 if __name__ == "__main__":
     task = CopyFromClipboardTask(task_id="test")
     text_manager = TextManager()

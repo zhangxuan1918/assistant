@@ -1,6 +1,8 @@
+from assistant.audio.stt_service import STTService
+from assistant.audio.audio_manager import AudioManager, SpeechToTextTask
+
 import os
-from audio.stt_service import STTService
-from audio_manager import AudioManager, SpeechToTextTask
+
 
 if __name__ == "__main__":
     filename = "./audio.wav"

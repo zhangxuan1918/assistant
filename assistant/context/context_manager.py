@@ -1,31 +1,30 @@
-from dataclasses import dataclass
-from enum import Enum
-import threading
-import time
-from typing import Any, Dict, List, Tuple
-import uuid
-
-import speech_recognition as sr
-from audio.stt_service import STTService
-from audio.tts_service import (
+from assistant.audio.stt_service import STTService
+from assistant.audio.tts_service import (
     TTSServiceChatTTS,
     TTSServiceMeloTTS,
     TTSServiceType,
 )
-from audio.util import play_audio, record_audio
-from audio.audio_manager import (
+from assistant.audio.util import play_audio, record_audio
+from assistant.audio.audio_manager import (
     AudioManager,
     SpeechToTextTask,
     TextToSpeechResultChatTTS,
     TextToSpeechResultMeloTTS,
     TextToSpeechTask,
 )
-from llm.llm_service import LLMService
-from text.text_manager import (
+from assistant.llm.llm_service import LLMService
+from assistant.text.text_manager import (
     CopyFromClipboardTask,
     TextManager,
 )
-from llm.llm_manager import LlmGenerationTask, LlmManager, TaskStatus
+from assistant.llm.llm_manager import LlmGenerationTask, LlmManager, TaskStatus
+
+from dataclasses import dataclass
+from enum import Enum
+import threading
+import time
+from typing import Any, Dict, List, Tuple
+import uuid
 
 
 class TaskType(Enum):
@@ -178,7 +177,7 @@ def start_services(
     elif tts_service_type == TTSServiceType.MELO_TTS:
         tts_service = TTSServiceMeloTTS(context_manager.audio_manager)
     else:
-        raise Exception(f"TTSServiceType: {tts_service_type.Name} not supported")
+        raise Exception(f"TTSServiceType: {tts_service_type.name} not supported")
     tts_thread = threading.Thread(target=tts_service.run)
     tts_thread.start()
 
