@@ -58,15 +58,14 @@ if __name__ == "__main__":
     filenames = ["audio.wav", "audio2.wav"]
     folder = os.path.dirname(os.path.abspath(__file__))
 
-    audio_manager = AudioManager(conversation_id="2")
+    audio_manager = AudioManager()
     stt_service, thread = start_stt(audio_manager=audio_manager)
     for i, filename in enumerate(filenames):
         print(f"processing {i}th audio")
-        task = SpeechToTextTask(task_id=str(i), filepath=os.path.join(folder, filename))
+        with open(os.path.join(folder, filename), "rb") as wav_file:
+            audio_data = wav_file.read()
+        task = SpeechToTextTask(task_id=str(i), audio_data=audio_data)
         audio_manager.add_audio_to_text_task(task)
-        print(
-            f"has pending speech to text task: {audio_manager.has_pending_audio_to_text_tasks()}"
-        )
         while not audio_manager.has_audio_to_text_results(task=task):
             time.sleep(1)
         text = audio_manager.get_audio_to_text_result(task_id=task.task_id)

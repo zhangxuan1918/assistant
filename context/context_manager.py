@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum
-import os
 import threading
 import time
 from typing import Any, Dict, List, Tuple
@@ -163,12 +162,7 @@ class ContextManager:
 
     def clear(self) -> None:
         # Clean up resources used.
-        # Close pyaudio.
-        self._py_audio.terminate()
-
-        # Delete temporary folder.
-        if os.path.exists(self._temp_folder):
-            os.removedirs(self._temp_folder)
+        pass
 
 
 def start_services(
