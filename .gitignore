@@ -1,7 +1,4 @@
 *.wav
 .vscode/
-*/__pycache__/
-*/*/__pycache__/
-assistant/setup.py
-assistant/.env
-assistant.egg-info/
+__pycache__/
+.env
